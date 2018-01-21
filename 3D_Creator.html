@@ -89,11 +89,15 @@ function createCube(){
 var firstDraw = true;
 var stringLine = "";
 var stringLineHTML = "Result";
+var stringHole = "";
+var stringHoleHTML = "";
+var setHole = false;
 var boolDessin = false;
 var oldX = -1;
 var oldY = -1;
 var moveTo = true;
 var nbPoint = 0;
+var nbHolePoint = 0;
 
 function dessin(){
 	if(boolDessin == true){
@@ -103,43 +107,81 @@ function dessin(){
 		var intersectsMouse = raycasterMouse.intersectObjects( scene.children );
 		
 		for (i=0; i<intersectsMouse.length; i++) {
+			renderResult();
 			if(i == 0){
 				var id = intersectsMouse[0].object.userData.number;
 
 				if(id>=0){
-					var col = intersectsMouse[0].object.geometry.faces
-					for(j=0; j<12; j++){
-						col[j].color.setRGB(1,0,0)
-					}
-					
-					listCube[id].mesh.geometry.elementsNeedUpdate = true;
 
-					if(oldX != intersectsMouse[0].object.userData.x || oldY != intersectsMouse[0].object.userData.y){
-						if(moveTo){
-							stringLine += `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
-							stringLineHTML = `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
-							moveTo = false;
-							nbPoint++;
+
+					if(setHole == false){
+						// MAKING SHAPE ///////////////////////////////////////////////////////////////////////////////////
+						var col = intersectsMouse[0].object.geometry.faces
+						for(j=0; j<12; j++){
+							col[j].color.setRGB(1,0,0)
 						}
-						else{
-							stringLine += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
-							stringLineHTML  += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
-							nbPoint++;
+						
+						listCube[id].mesh.geometry.elementsNeedUpdate = true;
+
+						if(oldX != intersectsMouse[0].object.userData.x || oldY != intersectsMouse[0].object.userData.y){
+							if(moveTo){
+								stringLine += `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
+								stringLineHTML = `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
+								moveTo = false;
+								nbPoint++;
+							}
+							else{
+								stringLine += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
+								stringLineHTML  += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
+								nbPoint++;
+							}
+							if(nbPoint>=3){create();}
 						}
-						if(nbPoint>=3){create();}
-					}
-					oldX = intersectsMouse[0].object.userData.x;
-					oldY = intersectsMouse[0].object.userData.y;	
+						oldX = intersectsMouse[0].object.userData.x;
+						oldY = intersectsMouse[0].object.userData.y;
+					} // END SHAPE
+					//////////////////////////////////////////////////////////////////////////////////////////////////////////
+					else if(setHole == true){
+						// MAKING HOLES
+						var col = intersectsMouse[0].object.geometry.faces
+						for(j=0; j<12; j++){
+							col[j].color.setRGB(1,0,0)
+						}
+						
+						listCube[id].mesh.geometry.elementsNeedUpdate = true;
+
+						if(oldX != intersectsMouse[0].object.userData.x || oldY != intersectsMouse[0].object.userData.y){
+							if(moveTo){
+								stringHole += `holeShape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
+								stringHoleHTML = `holeShape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
+								moveTo = false;
+								nbHolePoint++;
+							}
+							else{
+								stringHole += `holeShape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y});\n`;
+								stringHoleHTML  += `holeShape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y}); <br>`;
+								nbHolePoint++;
+							}
+							if(nbHolePoint>=3){create();}
+						}
+						oldX = intersectsMouse[0].object.userData.x;
+						oldY = intersectsMouse[0].object.userData.y;
+					} // END HOLES /////////////////////////////////////////////////////////////////////////////////////////////
 				}
 				else if(id == -5){
 					reset();
-				}			
+					renderResult();
+				}
+				else if(id == -10){
+					setHole = true;
+					oldX = -1;
+					oldY = 1;
+					moveTo = true;
+				}	
 			}
 		}
 	}
 }
-
-
 
 function create(){
 	if(firstDraw == true){
@@ -158,8 +200,13 @@ function create(){
 
 function testMesh(){
 	var shape = new THREE.Shape();
+	var holeShape = new THREE.Shape();
 
 	eval(stringLine);
+
+	if(nbHolePoint>=3){
+	eval(stringHole)
+	shape.holes.push(holeShape);}
 
 	var extrudeSettings = { amount: 1, bevelEnabled: true, bevelSegments: 10, steps: 1, bevelSize: 0.8, bevelThickness: 1 };
 	var geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
@@ -168,15 +215,33 @@ function testMesh(){
 }
 
 //////////////////////////////////////////
+/*var zeroShapeHole = new THREE.Shape();
+	zeroShapeHole.moveTo(0.4, 0.4);
+	zeroShapeHole.lineTo(2.6, 0.4);
+	zeroShapeHole.lineTo(2.6, 2.6);
+	zeroShapeHole.lineTo(0.4, 2.6);
+	zeroShapeHole.lineTo(0.4, 0.4);
+
+	zeroShape.holes.push(zeroShapeHole)
+	*/
 
 var buttonReset;
+var buttonHole;
 function createButtons(){
-	buttonReset = new Cube(-5, gridSize+1, gridSize+1);
+	buttonReset = new Cube(-5, 0, 0);
 	buttonReset.mesh.position.x = gridSize*cubeSize + 8
 	buttonReset.mesh.position.y = (gridSize)*cubeSize - 10;
 	buttonReset.mesh.position.z = 0; 
 	buttonReset.mesh.scale.set(4, 4, 4);
 	scene.add(buttonReset.mesh);
+
+	buttonHole = new Cube(-10, 0, 0);
+	buttonHole.mesh.position.x = gridSize*cubeSize + 8
+	buttonHole.mesh.position.y = (gridSize)*cubeSize - 25;
+	buttonHole.mesh.position.z = 0;
+	buttonHole.mesh.scale.set(4, 4, 4);
+	scene.add(buttonHole.mesh);
+
 }
 
 function reset(){
@@ -184,11 +249,15 @@ function reset(){
 	firstDraw = true;
 	stringLine = "";
 	stringLineHTML = "Result";
+	stringHole = "";
+	stringHoleHTML = "";
+	setHole = false;
 	boolDessin = false;
 	oldX = -1;
 	oldY = -1;
 	moveTo = true;
 	nbPoint = 0;
+	nbHolePoint = 0;
 	for(i=0; i<gridSize; i++){
 		for(j=0; j<gridSize; j++){
 			scene.remove(listCube[gridSize*i+j].mesh)
@@ -201,6 +270,8 @@ function reset(){
 function renderResult(){
 	var result = document.getElementById('result');
 	result.innerHTML = stringLineHTML;
+	result.innerHTML += "<br>";
+	result.innerHTML += stringHole;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +287,7 @@ function init(){
 
 function loop(){ 
 	dessin();
-	renderResult();
+
 	renderer.render(scene, camera);
 	requestAnimationFrame(loop);
 }
