@@ -32,7 +32,9 @@
 </script>
 
 <script>
-var cubeSize = 4
+var cubeSize = 2;
+var gridSize = 120/cubeSize;
+var font;
 
 function Cube(number, x, y){
 	var geometry = new THREE.BoxGeometry(cubeSize, cubeSize, 1, 1, 1, 1)
@@ -43,7 +45,6 @@ function Cube(number, x, y){
 		vertexColors: THREE.FaceColors,
 		shading:THREE.FlatShading,
 		side: THREE.DoubleSide,
-		//emissive: 0x0000ff
 	});
 	var mat2 = new THREE.MeshPhongMaterial({
 		color: 0x68c3c0,
@@ -52,7 +53,6 @@ function Cube(number, x, y){
 		vertexColors: THREE.FaceColors,
 		shading:THREE.FlatShading,
 		side: THREE.DoubleSide,
-		//emissive: 0x0000ff
 	});
 	if(x%2 == 0 && y%2 == 0){this.mesh = new THREE.Mesh(geometry, mat);}
 	else if(x%2 !=0 && y%2 !=0){this.mesh = new THREE.Mesh(geometry, mat);}
@@ -62,30 +62,27 @@ function Cube(number, x, y){
 	this.mesh.userData = {number: number, x: x, y: y}
 }
 
-
 var listCube = [];
 function createCube(){
-	for(i=0; i<30; i++){
-		for(j=0; j<30; j++){
-			listCube[30*i+j] = new Cube(30*i + j, j, i);
-			listCube[30*i+j].mesh.position.x = j*cubeSize;
-			listCube[30*i+j].mesh.position.y = i*cubeSize;
-			listCube[30*i+j].mesh.position.z = 0;
-			scene.add(listCube[30*i+j].mesh);
+	for(i=0; i<gridSize; i++){
+		for(j=0; j<gridSize; j++){
+			listCube[gridSize*i+j] = new Cube(gridSize*i + j, j, i);
+			listCube[gridSize*i+j].mesh.position.x = j*cubeSize;
+			listCube[gridSize*i+j].mesh.position.y = i*cubeSize;
+			listCube[gridSize*i+j].mesh.position.z = 0;
+			scene.add(listCube[gridSize*i+j].mesh);
 		}
 	}
 }
 
-//var refString = shape.lineTo(0.4, 0.4);
+
+var firstDraw = true;
 var stringLine = "";
 var boolDessin = false;
-document.onmousedown = function md(e){boolDessin = true}
-document.onmouseup = function mu(e){boolDessin = false}
-
 var oldX = -1;
 var oldY = -1;
 var moveTo = true;
-nbPoint = 0;
+var nbPoint = 0;
 
 function dessin(){
 	if(boolDessin == true){
@@ -96,71 +93,95 @@ function dessin(){
 		
 		for (i=0; i<intersectsMouse.length; i++) {
 			if(i == 0){
-				var col = intersectsMouse[0].object.geometry.faces
-				for(j=0; j<12; j++){
-					col[j].color.setRGB(1,0,0)
-				}
-				
 				var id = intersectsMouse[0].object.userData.number;
-				//console.log(intersectsMouse[0].object.userData.number)
-				listCube[id].mesh.geometry.elementsNeedUpdate = true;
 
-
-
-				if(oldX != intersectsMouse[0].object.userData.x || oldY != intersectsMouse[0].object.userData.y){
-					if(moveTo){
-						stringLine += `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y})\n`;
-						moveTo = false;
-						nbPoint++;
+				if(id>=0){
+					var col = intersectsMouse[0].object.geometry.faces
+					for(j=0; j<12; j++){
+						col[j].color.setRGB(1,0,0)
 					}
-					else{
-						stringLine += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y})\n`;
-						nbPoint++;
+					
+					listCube[id].mesh.geometry.elementsNeedUpdate = true;
+
+					if(oldX != intersectsMouse[0].object.userData.x || oldY != intersectsMouse[0].object.userData.y){
+						if(moveTo){
+							stringLine += `shape.moveTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y})\n`;
+							moveTo = false;
+							nbPoint++;
+						}
+						else{
+							stringLine += `shape.lineTo(${intersectsMouse[0].object.userData.x}, ${intersectsMouse[0].object.userData.y})\n`;
+							nbPoint++;
+						}
+						if(nbPoint>=3){create();}
 					}
-					console.log(stringLine)
+					oldX = intersectsMouse[0].object.userData.x;
+					oldY = intersectsMouse[0].object.userData.y;	
 				}
-			
-
-				oldX = intersectsMouse[0].object.userData.x;
-				oldY = intersectsMouse[0].object.userData.y;
-				
-				if(nbPoint>=3){create();}
-				
+				else if(id == -5){
+					reset();
+				}			
 			}
 		}
 	}
 }
 
-var meshes = [];
-var nbMeshes = 0;
 function create(){
-
-	if(nbMeshes>0){meshes[nbMeshes-1].mesh.visible = false}
-	meshes[nbMeshes] = new testMesh();
-	
-	meshes[nbMeshes].mesh.position.set(130,58,0)
-	scene.add(meshes[nbMeshes].mesh)
-	nbMeshes++;
+	if(firstDraw == true){
+		font = new testMesh();
+		firstDraw = false;
+		scene.add(font.mesh);
+		font.mesh.position.set(125, 0,0);
+	}
+	else{
+		scene.remove(font.mesh);
+		font = new testMesh();
+		scene.add(font.mesh);
+		font.mesh.position.set(125, 0,0);
+	}
 }
 
 function testMesh(){
 	var shape = new THREE.Shape();
 
 	eval(stringLine);
-	console.log("created")
-
-
 
 	var extrudeSettings = { amount: 1, bevelEnabled: true, bevelSegments: 10, steps: 1, bevelSize: 0.8, bevelThickness: 1 };
 	var geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
 	this.mesh = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial({color: 0xff0000}) );
-	//this.mesh.scale.set(0.5, 0.5, 0.5);
+	this.mesh.scale.set(cubeSize, cubeSize, cubeSize);
 }
-var mouse = new THREE.Vector2();
-document.onmousemove = function vue(e){ // ne pas le faire sur le on mouse mouve, mais tout le temps à chaque frame ? 
-	mouse.x = ( e.clientX / window.innerWidth ) * 2 - 1;
-	mouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+
+//////////////////////////////////////////
+
+var buttonReset;
+function createButtons(){
+	buttonReset = new Cube(-5, gridSize+1, gridSize+1);
+	buttonReset.mesh.position.x = gridSize*cubeSize + 8
+	buttonReset.mesh.position.y = (gridSize)*cubeSize - 10;
+	buttonReset.mesh.position.z = 0; 
+	buttonReset.mesh.scale.set(4, 4, 4);
+	scene.add(buttonReset.mesh);
 }
+
+function reset(){
+	scene.remove(font.mesh)
+	firstDraw = true;
+	stringLine = "";
+	boolDessin = false;
+	oldX = -1;
+	oldY = -1;
+	moveTo = true;
+	nbPoint = 0;
+	for(i=0; i<gridSize; i++){
+		for(j=0; j<gridSize; j++){
+			scene.remove(listCube[gridSize*i+j].mesh)
+		}
+	}
+	listCube = [];
+	createCube();
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -168,6 +189,7 @@ function init(){
 	createScene();
 	createLights();
 	createCube();
+	createButtons();
 	loop();
 }
 
@@ -184,6 +206,16 @@ function resize(){
 	camera.updateProjectionMatrix();
 	renderer.setSize(width, height);
 }
+
+var mouse = new THREE.Vector2();
+document.onmousemove = function vue(e){
+	mouse.x = ( e.clientX / window.innerWidth ) * 2 - 1;
+	mouse.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+}
+
+document.onmousedown = function md(e){boolDessin = true}
+document.onmouseup = function mu(e){boolDessin = false}
+
 window.addEventListener('load', init, false); 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,12 +225,10 @@ window.addEventListener('load', init, false);
 
 document.onkeydown = function pression(e){		
 	if(e.keyCode == 90){//
-		//camera.position.z -= 5;
-		create();
+		camera.position.z -= 5;
 	}
 	if(e.keyCode == 83){//
-		//camera.position.z += 5;
-		stringLine = "";
+		camera.position.z += 5;
 	}
 	if(e.keyCode == 81){//
 		camera.position.x -= 5;
